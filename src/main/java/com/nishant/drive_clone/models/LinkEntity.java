@@ -12,7 +12,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LinkEntity {
+public class LinkEntity extends BaseModel{
 
 	@ManyToOne
 	private FileEntity file;
