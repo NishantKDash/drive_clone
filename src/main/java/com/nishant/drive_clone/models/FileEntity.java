@@ -1,9 +1,14 @@
 package com.nishant.drive_clone.models;
 
+import java.time.LocalDate;
 import java.util.List;
+
+import com.nishant.drive_clone.enums.FileAccessType;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
@@ -31,6 +36,8 @@ public class FileEntity extends BaseModel {
 	private String fileKey;
 	private String fileType;
 	private Long fileSize;
-	private String fileUrl;
+	@Enumerated(EnumType.STRING)
+	private FileAccessType accessType;
+	private LocalDate creationDate;
 
 }
