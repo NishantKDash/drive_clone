@@ -9,10 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class FileUploadRequestDto {
+public class FileDownloadResponseDto {
 
-	
-	private String fileName;
-	private Long fileSize;
-	private String fileType;
+	private String presignedUrl;
 }

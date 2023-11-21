@@ -7,12 +7,10 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
-public class FileUploadRequestDto {
-
-	
+@NoArgsConstructor
+public class FileDownloadRequestDto {
+   
+	private String owner;
 	private String fileName;
-	private Long fileSize;
-	private String fileType;
 }
