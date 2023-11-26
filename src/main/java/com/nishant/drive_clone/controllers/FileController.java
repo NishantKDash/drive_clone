@@ -1,20 +1,26 @@
 package com.nishant.drive_clone.controllers;
 
 import java.security.Principal;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.nishant.drive_clone.dtos.AccessAddOrRemoveDto;
 import com.nishant.drive_clone.dtos.FileDownloadRequestDto;
 import com.nishant.drive_clone.dtos.FileDownloadResponseDto;
 import com.nishant.drive_clone.dtos.FileUploadRequestDto;
 import com.nishant.drive_clone.dtos.FileUploadResponseDto;
+import com.nishant.drive_clone.dtos.FileViewResponseDto;
+import com.nishant.drive_clone.models.FileEntity;
 import com.nishant.drive_clone.services.FileService;
 
 @RestController
@@ -52,5 +58,50 @@ public class FileController {
 		} catch (Exception e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
 		}
+	}
+
+	@GetMapping("/view")
+	public ResponseEntity<List<FileViewResponseDto>> getFiles(Principal user) {
+		List<FileEntity> ownedFiles = fileService.getOwnedFiles(user.getName());
+		List<FileEntity> acquiredFiles = fileService.getAcquiredFiles(user.getName());
+
+		List<FileViewResponseDto> response = ownedFiles.stream().map(file -> {
+			FileViewResponseDto fileResponse = new FileViewResponseDto();
+			fileResponse.setFileName(file.getFileName());
+			fileResponse.setCreationDate(file.getCreationDate());
+			fileResponse.setFileKey(file.getFileKey());
+			fileResponse.setFileSize(file.getFileSize());
+			fileResponse.setFileType(file.getFileType());
+			fileResponse.setOwner(file.getOwner().getEmail());
+			return fileResponse;
+		}).collect(Collectors.toList());
+
+		response.addAll(acquiredFiles.stream().map(file -> {
+			FileViewResponseDto fileResponse = new FileViewResponseDto();
+			fileResponse.setFileName(file.getFileName());
+			fileResponse.setCreationDate(file.getCreationDate());
+			fileResponse.setFileKey(file.getFileKey());
+			fileResponse.setFileSize(file.getFileSize());
+			fileResponse.setFileType(file.getFileType());
+			fileResponse.setOwner(file.getOwner().getEmail());
+			return fileResponse;
+		}).collect(Collectors.toList()));
+
+		return ResponseEntity.ok(response);
+	}
+
+	@PostMapping("/{fileName}/access/add")
+	public ResponseEntity<String> addAccesses(@PathVariable String fileName,
+			@RequestBody AccessAddOrRemoveDto accessDto, Principal owner) {
+
+		fileService.addAccesses(owner.getName(), fileName, accessDto.getUsers());
+		return ResponseEntity.ok("Access have been added");
+	}
+
+	@PostMapping("/{fileName}/access/remove")
+	public ResponseEntity<String> removeAccesses(@PathVariable String fileName,
+			@RequestBody AccessAddOrRemoveDto accessDto, Principal owner) {
+		fileService.removeAccesses(owner.getName(), fileName, accessDto.getUsers());
+		return ResponseEntity.ok("Access have been removed");
 	}
 }

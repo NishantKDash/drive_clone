@@ -17,16 +17,15 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserEntity extends BaseModel{
+public class UserEntity extends BaseModel {
 
-	
 	private String email;
 	private String name;
 	private String password;
-	
-	@OneToMany(mappedBy = "owner" , cascade=CascadeType.ALL)
+
+	@OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
 	private List<FileEntity> files;
-	
+
 	@OneToMany(mappedBy = "consumer" , cascade=CascadeType.ALL)
 	private List<AccessEntity> accesses;
 }

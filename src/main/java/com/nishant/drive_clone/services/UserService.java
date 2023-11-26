@@ -15,6 +15,9 @@ public class UserService {
 
 	@Autowired
 	private UserRepository userRepository;
+	
+	@Autowired
+	private EmailNotificationService emailNotificationService;
 
 	@Autowired
 	private PasswordEncoder encoder;
@@ -24,6 +27,8 @@ public class UserService {
 			throw new UserAlreadyExistsException("A user with email:" + email + "is already registerd");
 		UserEntity user = UserEntity.builder().name(name).email(email).password(encoder.encode(password)).build();
 		userRepository.save(user);
+		emailNotificationService.sendEmail(email, "Account Creation", "Hi , Your account has been successfully created !");
+		
 		return user;
 	}
 
