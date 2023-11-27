@@ -4,17 +4,21 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.nishant.drive_clone.dtos.FileShareLinkHandleDto;
 import com.nishant.drive_clone.enums.FileAccessType;
 import com.nishant.drive_clone.models.AccessEntity;
 import com.nishant.drive_clone.models.FileEntity;
+import com.nishant.drive_clone.models.LinkEntity;
 import com.nishant.drive_clone.models.UserEntity;
 import com.nishant.drive_clone.repositories.AccessRepository;
 import com.nishant.drive_clone.repositories.FileRepository;
+import com.nishant.drive_clone.repositories.LinkRepository;
 import com.nishant.drive_clone.repositories.UserRepository;
 import com.nishant.drive_clone.s3.buckets;
 import com.nishant.drive_clone.s3.service;
@@ -30,6 +34,9 @@ public class FileService {
 
 	@Autowired
 	private FileRepository fileRepository;
+
+	@Autowired
+	private LinkRepository linkRepository;
 
 	@Autowired
 	private buckets bucket;
@@ -102,6 +109,8 @@ public class FileService {
 			return ownedFile.getFileName().equals(fileName);
 		}).findFirst().get();
 
+		selectedFile.setAccessType(FileAccessType.RESTRICTED);
+
 		users.stream().forEach((user) -> {
 			UserEntity consumer = userRepository.findByEmail(user);
 			if (accessRepository.accessByOwnerConsumerFile(ownerUser, consumer, selectedFile) == null) {
@@ -152,6 +161,9 @@ public class FileService {
 			consumer.setAccesses(acquiredAccesses);
 			selectedFile.setAccesses(listedAccesses);
 
+			if (listedAccesses.size() == 0)
+				selectedFile.setAccessType(FileAccessType.PRIVATE);
+
 			accessRepository.delete(access);
 			userRepository.save(consumer);
 			fileRepository.save(selectedFile);
@@ -159,6 +171,52 @@ public class FileService {
 					+ selectedFile.getFileName() + "has been removed by " + ownerUser.getEmail());
 
 		});
+	}
+
+	public String createFileShareLink(String fileName, String owner) {
+		UserEntity ownerUser = userRepository.findByEmail(owner);
+		List<FileEntity> ownedFiles = ownerUser.getFiles();
+		FileEntity selectedFile = ownedFiles.stream().filter((ownedFile) -> {
+			return ownedFile.getFileName().equals(fileName);
+		}).findFirst().get();
+
+		LinkEntity link = new LinkEntity();
+		link.setFile(selectedFile);
+		String randomLink = UUID.randomUUID().toString();
+		link.setLinkCode(randomLink);
+
+		selectedFile.getLinks().add(link);
+
+		selectedFile.setAccessType(FileAccessType.PUBLIC);
+		fileRepository.save(selectedFile);
+		return randomLink;
+	}
+
+	public void makeFilePrivate(String fileName, String owner) {
+		UserEntity ownerUser = userRepository.findByEmail(owner);
+		List<FileEntity> ownedFiles = ownerUser.getFiles();
+		FileEntity selectedFile = ownedFiles.stream().filter((ownedFile) -> {
+			return ownedFile.getFileName().equals(fileName);
+		}).findFirst().get();
+
+		List<String> users = selectedFile.getAccesses().stream().map(access -> access.getConsumer().getEmail())
+				.collect(Collectors.toList());
+		removeAccesses(owner, fileName, users);
+		List<LinkEntity> links = selectedFile.getLinks();
+		links.stream().forEach(link -> linkRepository.delete(link));
+		selectedFile.getLinks().clear();
+		selectedFile.setAccessType(FileAccessType.PRIVATE);
+		fileRepository.save(selectedFile);
+	}
+
+	public FileShareLinkHandleDto handleFileShareLink(String id) {
+		LinkEntity link = linkRepository.getLinkFromlinkCode(id);
+		FileShareLinkHandleDto dto = new FileShareLinkHandleDto();
+		dto.setFileName(link.getFile().getFileName());
+		dto.setOwner(link.getFile().getOwner().getEmail());
+		dto.setCreationDate(link.getFile().getCreationDate());
+		dto.setFileType(link.getFile().getFileType());
+		return dto;
 	}
 
 }

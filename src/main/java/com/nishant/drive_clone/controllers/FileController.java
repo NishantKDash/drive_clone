@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.nishant.drive_clone.dtos.AccessAddOrRemoveDto;
 import com.nishant.drive_clone.dtos.FileDownloadRequestDto;
 import com.nishant.drive_clone.dtos.FileDownloadResponseDto;
+import com.nishant.drive_clone.dtos.FileShareLinkHandleDto;
+import com.nishant.drive_clone.dtos.FileShareLinkResponseDto;
 import com.nishant.drive_clone.dtos.FileUploadRequestDto;
 import com.nishant.drive_clone.dtos.FileUploadResponseDto;
 import com.nishant.drive_clone.dtos.FileViewResponseDto;
@@ -29,6 +32,9 @@ public class FileController {
 
 	@Autowired
 	private FileService fileService;
+
+	@Value("${client.domain}")
+	private String clientDomain;
 
 	@GetMapping("/upload")
 	public FileUploadResponseDto upload(@RequestBody FileUploadRequestDto fileDto, Principal user) {
@@ -103,5 +109,29 @@ public class FileController {
 			@RequestBody AccessAddOrRemoveDto accessDto, Principal owner) {
 		fileService.removeAccesses(owner.getName(), fileName, accessDto.getUsers());
 		return ResponseEntity.ok("Access have been removed");
+	}
+
+	@GetMapping("/{fileName}/public")
+	public ResponseEntity<FileShareLinkResponseDto> makeFilePublic(@PathVariable String fileName, Principal owner) {
+		FileShareLinkResponseDto fileShareLinkDto = new FileShareLinkResponseDto();
+		fileShareLinkDto.setFileName(fileName);
+		fileShareLinkDto.setOwner(owner.getName());
+		String link = fileService.createFileShareLink(fileName, owner.getName());
+		String sharableLink = clientDomain + "/" + link;
+		fileShareLinkDto.setLink(sharableLink);
+		return ResponseEntity.ok(fileShareLinkDto);
+	}
+
+	@PostMapping("/{fileName}/private")
+	public ResponseEntity<String> makeFilePrivate(@PathVariable String fileName, Principal owner) {
+		fileService.makeFilePrivate(fileName, owner.getName());
+		return ResponseEntity.ok("The file is now private");
+	}
+
+	@GetMapping("/share/{id}")
+	public ResponseEntity<FileShareLinkHandleDto> handleFileShareLink(@PathVariable String id) {
+		FileShareLinkHandleDto fileShareLinkHandleDto = fileService.handleFileShareLink(id);
+		return ResponseEntity.ok(fileShareLinkHandleDto);
+
 	}
 }
